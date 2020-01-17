@@ -39,8 +39,8 @@ kaboom='depth=`pwd | tr -cd "\/" | wc -c`; var=`curdir`; if (( $depth > $MIN-SAV
 alias l='ls -1A' #its digit 1
 alias ll='ls -lA'
 alias tarlist='command tar -tvf'
-alias untar='command tar -zxvf'
-alias tar='command tar -zcvf'
+alias untar='command tar -zxvf' #
+alias tar='command tar -zcvf'	#*.tgz source
 alias -- -='command cd -'
 
 ###########
