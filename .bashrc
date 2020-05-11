@@ -1,5 +1,41 @@
 alias bv='echo "BASH VERSION 1.0"'
 
+################## BYOBU ##################
+
+#solution for byobu terminals
+if [[ `ps -o comm= $PPID` == "tmux"* ]];
+then
+    byobu set-window-option -g status-left " #S " &>/dev/null
+    #shift panes horizontally/vertically
+    alias sh='byobu-tmux select-pane -t 0 && byobu-tmux split-window -h && byobu-tmux swap-pane -D && byobu-tmux kill-pane ; byobu-tmux select-pane -t 0 && byobu-tmux split-window -v && byobu-tmux swap-pane -D && byobu-tmux kill-pane'
+    alias sv='byobu-tmux select-pane -t 0 && byobu-tmux split-window -v && byobu-tmux swap-pane -D && byobu-tmux kill-pane ; byobu-tmux select-pane -t 0 && byobu-tmux split-window -h && byobu-tmux swap-pane -D && byobu-tmux kill-pane'
+
+    #zoom
+    alias zoom='byobu-tmux resize-pane -Z' #or <Shift-F11>
+fi
+if [ `pwd` == '/' ];
+then
+    cd `eval echo $(cat ~/.byobu/.cd 2>/dev/null)`
+fi
+while read -r SCR ; do . $SCR ; done < <(find /etc/profile.d/ | grep '\.sh$')
+####### BYOBU TIPS #######
+#### SESSIONS
+#CTRL+SHIFT+F2      - NEW
+#ALT+UP||DOWN       - SWITCH
+#CTRL+F8            - RENAME (to see session name you need command: byobu set-window-option -g status-left " #S ")
+
+#### WINDOWS
+#F2                 - NEW
+#CTRL+F2            - SPLIT vertically
+#F3||F4             - SWITCH
+#F8                 - RENAME
+
+##### POTENTIALS #######
+#CTRL+F9 opens a prompt that lets you send the same input to every window; SHIFT+F9 does the same for every pane.
+
+##########################################
+
+################## BASH ##################
 check-mem-leak()
 {
 	if [ -z "$1" ]; then
@@ -43,9 +79,132 @@ alias untar='command tar -zxvf' #
 alias tar='command tar -zcvf'	#*.tgz source
 alias -- -='command cd -'
 
-###########
-### GIT ###
-###########
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF1'
+alias g='grep -I'
+alias gi='g -i'
+alias gr='g -r'
+alias gri='g -ri'
+alias gril='g -ril'
+alias gv='g -v'
+alias rm="command rm -rvf"
+alias cp='cp -r'
+alias gcpp='g -E "\.cpp|\.hpp|\.h|\.c"' #grep cpp files
+
+alias vd='vim diff'
+
+open_last_result_by_line_number() #!!! CAUTION !!! do not use this without alias "o"
+{
+    editor=vim
+    if [ ! -z ${1+x} ]
+    then
+        editor=$1
+    fi
+    number=1
+    if [ ! -z ${2+x} ]
+    then
+        number=$2
+    fi
+    tries=10
+    tcount=0
+    limits=$((tries-1))
+    pattern="^[o]{1,3}\s?(vim\s|cat\s)?[0-9]{0,5}" # e.g. o vim 2
+    for i in `seq 2 $tries`;
+    do
+        last_command=$(fc -nl -$i | head -1)
+        last_command=${last_command:2}
+        echo $last_command | grep -oP $pattern
+        if [[ $? == 0 ]];
+        then
+            if (( $tcount >= $limit ));
+            then
+                return 1
+            fi
+            tcount=$((tcount + 1))
+            continue;
+        else
+                break;
+        fi
+    done
+    commands="$last_command | sed -n ${number}p"
+    result=`eval $commands`
+    result="${result%%:*}"
+    $editor $result
+}
+alias o='open_last_result_by_line_number vim'
+rid() # removing passed pattern from stdin(pipe) # function accepting literally * and /
+{
+    tmp=$1
+    tmp=${tmp//\./\\.}
+    tmp=${tmp//\*/.*}
+    tmp=${tmp//\//\\/}
+    sed -E 's/'"${tmp}"'/'"${2}"'/g'
+}
+alias vd='vimdiff'
+alias diffr='diff -ur'          #diff dirs recursively
+
+alias curdir='basename `pwd`'
+alias -- -='cd -'
+alias reload='. ~/.karolrc 1>/dev/null'
+alias rr='reload'
+alias ?b='vim ~/.karolrc'
+alias ?v='vim ~/.vimrc'
+alias pscr='gnome-screenshot --clipboard'
+alias morning='redshift -O 6500'
+alias normal='redshift -O 4800'
+alias night='redshift -O 3800'
+alias blood='redshift -O 1000'
+alias suspend='systemctl suspend'
+alias rcp=$'revert-cp() { cp `echo "$@" |  awk \'{ last=$NF; $NF=$(NF-1); $(NF-1)=last; print $0 }\'`; }; revert-cp'
+alias a='type'
+alias m='make all'
+alias mm='see Makefile | gv "\.\/Makefile" | sed 's/Makefile//g' | while read i ; do cd $i ; make all ; cd - ; done ; make all'
+print-workspace-directory()
+{
+    tmp=`pwd` ; printf "$tmp/${1/\.\//}\n"
+}
+alias pw='print-workspace-directory'
+alias mdc='mkdir -p'
+see ()
+{
+    find ${2- } ${3- } ${4- } ${5- } ${6- } -iname "*$1*" | egrep '.*'
+}
+print-workspace-directory()
+{
+    tmp=`pwd` ; printf "$tmp/${1/\.\//}\n"
+}
+alias pw='print-workspace-directory'
+alias mdc='mkdir -p'
+see ()
+{
+    find ${2- } ${3- } ${4- } ${5- } ${6- } -iname "*$1*" | egrep '.*'
+}
+
+seeenv()
+{
+    2>/dev/null find $(env | grep -v : | sed 's/^.*=//g' | grep '/' | less) -maxdepth 1 -iname "*$1*" | while read -r i ; do tmp=$(dirname $i) ; echo $i; env | grep $tmp | grep -v ':' | sed 's/^/\t/g' ; done
+}
+
+lib() #pass pattern(name of lib) to search throught the $LD_LIBRARY_PATH
+{
+    echo $LD_LIBRARY_PATH | sed 's/:/\n/g' | grep . | while read -r path ; do find $path -name "*$1*" -maxdepth 1 ; done
+}
+
+################## INFO ##################
+discspace ()
+{
+    df -h | grep mapper | awk '{print $2"/"$4" disk space left"}'
+}
+alias disc=discspace
+countram ()
+{
+    KB=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`; GB=$(((((KB+512)/1024)+512)/1024)) ; echo "RAM $GB GB"
+}
+alias ram=countram
+alias proc='echo "proc count `nproc`"'
+
+################## GIT ##################
 git_commit()
 {
   cur_command=$(fc -nl -0) #gets current command
@@ -61,56 +220,168 @@ git_diff()
     git diff
   fi
 }
+
 alias gd='git diff'
+alias dfx='git clean -dfx' #clean all changes from repo
 alias gs='git status -s'
+alias gss=$'gs | grep -v \'??\''
+alias gssm=$'gss | sed -E "s/^...//g"'
 alias gvd='git_diff'
-alias add='git add'
+alias add='git add --all'
+alias unadd='git reset'
+alias gk='gitk --all'
 alias stash='git stash'
-alias stashf='git stash save -p "Stash my file"'
 alias pop='git stash pop'
+alias stashf='git stash save -p "Stash my file"'
 alias gc='git checkout'
 alias branch='git branch'
 alias blame='git blame'
 alias gl='git lg' #git log
-#alias submanage='git submodule -b master add -f ssh://....'
 alias subi='git submodule update --init --recursive'
 alias subu='git submodule update --remote --recursive'
+#alias commit='git commit -m'
 alias comm='git_commit'
+alias amend='git commit --no-edit --amend'
+alias pull='git pull --rebase'
+alias push=$'BRANCH=`git rev-parse --abbrev-ref HEAD`; if [[ $BRANCH != *"master"* ]] || ; then git push -f origin $BRANCH ; else echo "NO WAY! DON\'T PUSH ON BRANCH $BRANCH" ; fi'
+alias branch='git branch'
+alias gb='git branch'
+alias fetch='git fetch origin' # `git rev-parse --abbrev-ref HEAD`' #download the newest origin repos
+#alias pull='git pull --rebase origin `git rev-parse --abbrev-ref HEAD`'
+#git diff --name-only  HEAD^[^]* - Previous commited files list. Something like 'git status' but with headers
+#alias reset='git reset' #--hard origin/develop #reset branch with lost changes to passed
+#git checkout -b branchxyz origin/branchxyz                  #create branch the same as origin
+#git checkout c5f567 -- file1/to/restore file2/to/restore    #get file from specyfic commit
+#git checkout c5f567~1 -- file1/to/restore file2/to/restore  #or "~1" commit before specyfic commit
+#alias submanage='git submodule -b master add -f ssh://....'
 
-open_last_result_by_line_number() #!!! CAUTION !!! do not use this without alias "o"
+alias sstrace='2>&1 strace -f -e trace=open,read,write,execve'                                #print only all
+alias ostrace='2>&1 strace -f -e trace=open'                                                  #print only open
+alias rstrace='2>&1 strace -f -e trace=read'                                                  #print only read
+alias wstrace='2>&1 strace -f -e trace=write'                                                 #print only write
+alias estrace='2>&1 strace -f -e trace=execve'                                                #print only execve
+
+############################################
+
+################## DOCKER ##################
+alias ds='docker ps -a'
+containerid-by-image () #gets container id by param image-name
 {
-  editor=vim
-  if [ ! -z ${1+x} ]
-  then
-    editor=$1
-  fi
-  number=1
-  if [ ! -z ${2+x} ]
-  then
-    number=$2
-  fi
-  tries=10
-  tcount=0
-  limits=$((tries-1))
-  pattern="^[o]{1,3}\s?(vim\s|cat\s)?[0-9]{0,5}" # e.g. o vim 2
-  for i in `seq 2 $tries`; do
-    last_command=$(fc -nl -$i | head -l)
-    last_command=${last_command:2}
-    echo $last_command | grep -oP $pat
-    if [[ $? == 0 ]];
-    then
-      if (( $tcount >= $limit ));
-      then
-        return 1
-      fi
-      tcount=$((tcount + 1))
-      continue;
+    if [ -z $1 ] ; then
+        echo "error !: PASS AT LEAST ONE PARAMETER" >&2
+        return 127
     else
-      break;
-    if
-  done
-  commands="$last_command | sed -n ${number}p"
-  result=`eval $commands`
-  result="$result%%:*"
-  $editor $result
+        echo `sudo docker ps -a | grep ${1- } | sed -n 1p | awk '{print $1}'`
+    fi
 }
+doc () #open dangled docker by IMAGE (if build was detached by ctl+p+q stand for ^P^Q)
+{
+    image=${1-c7}
+    sudo docker exec -it `containerid-by-image $image` bash
+}
+alias p6='doc p6'
+alias p8='doc p8'
+alias p87='doc p87'
+
+docb () #building docker with optional IMAGE name
+{
+    image=${1-c7}
+    docker build -t $image < Dockerfile . >&1 && docker run -it $image >&1
+}
+
+alias docc='docker system prune' #clear all IMAGE
+
+docstart () #start docker by IMAGE
+{
+    image=${1-c7}
+    docker start `containerid-by-image $image`
+    doc $image
+    return 0;
+}
+
+alias sp6='docstart p6'
+alias sp8='docstart p8'
+alias sp87='docstart p87'
+
+docstop () #stop docker by IMAGE
+{
+    image=${1-c7}
+    docker stop `containerid-by-image $image`
+}
+
+alias dsleep='docker stop `docker ps -a -q`'
+
+docremove () #remove container by IMAGE
+{
+    docker rm `containerid-by-image $image`
+}
+
+docremoveall () #CAUTION!
+{
+    docker rm $(docker ps -a -q)
+}
+
+deploy () #copy of local files described by Dockerfile to pointed IMAGE by parameter
+{
+    image=${1-c7}
+    container=$(containerid-by-image $image); cat Dockerfile | grep COPY | grep -v "tar\.gz" | perl -pe "s/COPY/docker cp/g" | perl -pe 's/(^.+\s.+)\s\/(.*$)/${1}\/. '"${container}"':\/${2}/g' | while IFS= read -r line; do echo "RUN: $line"; $line ; done
+
+    #container=`containerid-by-image $image`
+    #docker kill $container
+    #docker rm $container
+    #docb $image
+}
+
+if [ -z ${BASH_SOURCE- } ];
+then
+    exit "$errmsg"
+fi
+
+################## TIPS TODO ##################
+#rpm -qa | grep locate              #find package e.g.: mlocate-0.26-8.el7.x86_64
+#setterm -cursor on         #turn on cursor into terminal
+#tmp="123=foo"
+#echo ${tmp##*=}        #gives substr after char  '='           : result foo
+#echo ${tmp%%=*}        #gives substr before char '='           : result 123
+#mod=${tmp//123/456}        #replace ALL substr equal '123' to '456'    : result 456=foo
+
+#run command as different/other user
+#daka9002$ sudo su producer -c "groups"
+#prod firebird devel power admin
+#daka9002$ sudo su producer -c "whoami"
+#producer
+
+#while line by line
+#while IFS= read -r line; do echo $line ; done
+#echo fff | ( read tmp ; echo $tmp)
+#sudo rsync -rlR /./pollux/Releases/PolluxCS-8.8 .  #copy PolluxCS-8.8 with dir structure begun from /pollux
+#echo $PATH | tr : '\n'                 #tr change ':' to '\n'
+#sed -i '1s/^/task goes here\n/' todo.txt       #add the line to file at the top
+
+### C++ ###
+#which fbutpre                                      #finds the path to the executable "fbutpre"
+#readelf -sW /tmp/LocalBuild_polluxcs-6.6_000005/bin/fbutpre |c++filt |grep w_readterm  #reads with symbols or -aW all ?fuctions?
+#readelf -sW `which fbutpre` |c++filt |grep w_readterm                  #as above
+#perf record -g <command with args with debug-flags>                    #shows time used for each function
+#perf report --sort=dso <command with args with debug-flags>?               #sort for beginers to have better look whats happend
+################## debug ###############
+#readelf -aW /disk/home/daka9002/wslocal/polluxcs8/BASEL/libsrc/debug/libwrapsbf.so.1 | grep '.debug'          #check if binary file contains debug symbols
+#cgdb --args fbutpre ~/fbutpre.str                          #run debugger with visual mode
+##b lineNumber          #breakpoint on current file
+##disable breakpointNumber[s]   #disable breakpoints
+##enable breakpointNumber[s]    #enable breakpoints
+##s                 #step in function
+##n             #next line
+##c             #continue to next breakpoint
+##r             #[re]run program
+##fin[ish]          #finish current function
+##ptype StmStc          #check type of variable
+##f             ??
+##bt                ??
+#x/x                ??
+#x/20x              ??
+#LD_DEBUG=all DynCmpTest -c I,148                       #show linker symbols throught the running program
+
+#repositores
+#exmaple #git clone -b mybranch --single-branch git://sub.domain.com/repo.git
+
