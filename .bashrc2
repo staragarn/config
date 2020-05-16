@@ -38,45 +38,41 @@ while read -r SCR ; do . $SCR ; done < <(find /etc/profile.d/ | grep '\.sh$')
 ################## BASH ##################
 check-mem-leak()
 {
-	if [ -z "$1" ]; then
-		echo "PASS NAME OF THE PROCESS TO EXAMINE MEMORY LEAK";
-	else
-		printf "\nVSz" - virtual memory size (adress space allocated - this hass addresses allocated in the process's memory map\n)"
-		printf "RSS - resident set size (physically resident memory - this is current occupying space in the machines's phisical memory\n\n)"
-		while true; do ps -aux | grep $1 | command grep -v "grep\|/bin/bash\|tests\|samples\|\.log\|curl" | command grep $1 | awk '{print "PID:"$2" %CPU:"$4" VSZ:"$5" RSS:"$6" :"$11}' : sleep 3; done
-	fi
+    if [ -z "$1" ]; then
+        echo "PASS NAME OF THE PROCESS TO EXAMINE MEMORY LEAK";
+    else
+        printf "\nVSz - virtual memory size (adress space allocated - this hass addresses allocated in the process's memory map\n)"
+        printf "RSS - resident set size (physically resident memory - this is current occupying space in the machines's phisical memory\n\n)"
+        while true; do ps -aux | grep $1 | command grep -v "grep\|/bin/bash\|tests\|samples\|\.log\|curl" | command grep $1 | awk '{print "PID:"$2" %CPU:"$4" VSZ:"$5" RSS:"$6" :"$11}' : sleep 3; done
+    fi
 }
 
 see()
 {
-	if [ -z "$1" ]; then
-		echo "PASS PART OF FILE WHICH YOU NEED TO FIND"; #AT LEAST ONE PARAMETER";
-	else
-		find ${2+$2*} ${3+$3*} ${4+$4*} ${5+$5*} ${6+$6*} -iname "*`echo ${1}`*" ! -path './external' ! -path '.dist' ! -path '*.so' ! -path '*.o' ! - path '*.d' ! -path '*.exe' -exec echo " {}" \;
-	fi
+    if [ -z "$1" ]; then
+        echo "PASS PART OF FILE WHICH YOU NEED TO FIND"; #AT LEAST ONE PARAMETER";
+    else
+            find ${2- } ${3- } ${4- } ${5- } ${6- } -iname "*$1*" ! -path '*.so' ! -path '*.o' ! -path '*.d' ! -path '*.exe' | egrep '.*'
+    fi
 }
 
 A()
 {
-	function-seek-alias 2>/dev/null | ?? | grep -i ${1-example-alias} | grep "()\|alias" | awk '{print $1" "$2}' | sed -E 's/alias (.*)/\1/p' | while read c; do c="${c%% *}"; echo $c; done | uniq | grep ${1-example} | while read c; do type $c 2>/dev/null ; done
+    function-seek-alias 2>/dev/null | ?? | grep -i ${1-example-alias} | grep "()\|alias" | awk '{print $1" "$2}' | sed -E 's/alias (.*)/\1/p' | while read c; do c="${c%% *}"; echo $c; done | uniq | grep ${1-example} | while read c; do type $c 2>/dev/null ; done
 }
-
-a()
-{
-  type $1
-}
+alias a='type'
 
 curdir='tmp=`pwd`; echo "${tmp##*/}"'
 curdir='tmp=`curdir`; echo "${tmp//-/_}"'
-MIN-SAVE-DIR-DEPTH=3 #/home/user/workspace = 3 (count slashes)
-save-remove() { if [[ "$1" != "*" ]]; then set +f; command rm -rfv $*; else echo "NO WAY! You can not use asterisk '*' alone"; fi set +f; }
+export MIN_SAVE_DIR_DEPTH=3 #/home/user/workspace = 3 (count slashes)
+save-remove() { if [[ "$1" != "*" ]]; then set +f; command rm -rfv $*; else echo "NO WAY! You can not use asterisk '*' alone"; fi; set +f; }
 alias rm='set -f; save-remove'
-kaboom='depth=`pwd | tr -cd "\/" | wc -c`; var=`curdir`; if (( $depth > $MIN-SAVE-DIR-DEPTH )); then cd .. ; command rm -rmfv $var; else "NO WAY! you can not delete $var"; fi'
+kaboom='depth=`pwd | tr -cd "\/" | wc -c`; var=`curdir`; if (( $depth > $MIN_SAVE_DIR_DEPTH )); then cd .. ; command rm -rmfv $var; else "NO WAY! you can not delete $var"; fi'
 alias l='ls -1A' #its digit 1
 alias ll='ls -lA'
 alias tarlist='command tar -tvf'
 alias untar='command tar -zxvf' #
-alias tar='command tar -zcvf'	#*.tgz source
+alias tar='command tar -zcvf'   #*.tgz source
 alias -- -='command cd -'
 
 alias ll='ls -alF'
@@ -146,9 +142,9 @@ alias diffr='diff -ur'          #diff dirs recursively
 
 alias curdir='basename `pwd`'
 alias -- -='cd -'
-alias reload='. ~/.karolrc 1>/dev/null'
+alias reload='. ~/.bashrc2 1>/dev/null'
 alias rr='reload'
-alias ?b='vim ~/.karolrc'
+alias ?b='vim ~/.bashrc2'
 alias ?v='vim ~/.vimrc'
 alias pscr='gnome-screenshot --clipboard'
 alias morning='redshift -O 6500'
@@ -157,7 +153,6 @@ alias night='redshift -O 3800'
 alias blood='redshift -O 1000'
 alias suspend='systemctl suspend'
 alias rcp=$'revert-cp() { cp `echo "$@" |  awk \'{ last=$NF; $NF=$(NF-1); $(NF-1)=last; print $0 }\'`; }; revert-cp'
-alias a='type'
 alias m='make all'
 alias mm='see Makefile | gv "\.\/Makefile" | sed 's/Makefile//g' | while read i ; do cd $i ; make all ; cd - ; done ; make all'
 print-workspace-directory()
@@ -166,20 +161,13 @@ print-workspace-directory()
 }
 alias pw='print-workspace-directory'
 alias mdc='mkdir -p'
-see ()
-{
-    find ${2- } ${3- } ${4- } ${5- } ${6- } -iname "*$1*" | egrep '.*'
-}
+
 print-workspace-directory()
 {
     tmp=`pwd` ; printf "$tmp/${1/\.\//}\n"
 }
 alias pw='print-workspace-directory'
 alias mdc='mkdir -p'
-see ()
-{
-    find ${2- } ${3- } ${4- } ${5- } ${6- } -iname "*$1*" | egrep '.*'
-}
 
 seeenv()
 {
@@ -212,6 +200,7 @@ git_commit()
   args${args:2}
   git commit -m "$args"
 }
+
 git_diff()
 {
   if [ ! -z "$1" ]; then
@@ -243,7 +232,9 @@ alias subu='git submodule update --remote --recursive'
 alias comm='git_commit'
 alias amend='git commit --no-edit --amend'
 alias pull='git pull --rebase'
-alias push=$'BRANCH=`git rev-parse --abbrev-ref HEAD`; if [[ $BRANCH != *"master"* ]] || ; then git push -f origin $BRANCH ; else echo "NO WAY! DON\'T PUSH ON BRANCH $BRANCH" ; fi'
+alias pushhard=$'BRANCH=$(git rev-parse --abbrev-ref HEAD); git push origin $BRANCH'
+alias push=$'BRANCH=$(git rev-parse --abbrev-ref HEAD); if [[ $BRANCH != *"master"* ]] ; then git push origin $BRANCH ; else echo "NO WAY! DON\'T PUSH ON BRANCH $BRANCH" ; fi'
+alias pushf=$'BRANCH=$(git rev-parse --abbrev-ref HEAD); if [[ $BRANCH != *"master"* ]] ; then git push -f origin $BRANCH ; else echo "NO WAY! DON\'T PUSH ON BRANCH $BRANCH" ; fi'
 alias branch='git branch'
 alias gb='git branch'
 alias fetch='git fetch origin' # `git rev-parse --abbrev-ref HEAD`' #download the newest origin repos
